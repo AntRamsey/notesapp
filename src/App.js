@@ -1,8 +1,10 @@
 import './App.css';
-import React, {useEffect, useReducer} from 'react'
-import { API } from 'aws-amplify'
-import { List } from 'antd'
-import { listNotes } from './graphql/queries'
+import React, {useEffect, useReducer} from 'react';
+import { API } from 'aws-amplify';
+import { listNotes } from './graphql/queries';
+import { v4 as uuid } from 'uuid';
+import { List, Input, Button } from 'antd';
+import { createNote as CreateNote } from './graphql/mutations';
 
 const initialState = {
   notes: [],
@@ -21,6 +23,8 @@ const reducer = (state, action) => {
       return {...state};
   }
 };
+
+const CLIENT_ID = uuid()
 
 const App = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
