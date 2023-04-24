@@ -6,7 +6,8 @@ import { v4 as uuid } from 'uuid';
 import { List, Input, Button } from 'antd';
 import {
   createNote as CreateNote,
-  deleteNote as DeleteNote
+  deleteNote as DeleteNote,
+  updateNote as UpdateNote
 } from './graphql/mutations';
 
 const CLIENT_ID = uuid()
@@ -79,7 +80,7 @@ const App = () => {
   const deleteNote = async ({ id }) => {
     const index = state.notes.findIndex(n => n.id === id);
     const notes = [
-      ...state.notes.slice(0, index),
+      ...state.notes.slice(0, index), // TODO add a filter...
       ...state.notes.slice(index + 1)];
     dispatch({ type: 'SET_NOTES', notes })
     try {
@@ -93,6 +94,22 @@ const App = () => {
     }
   };
 
+  const updateNote = async (note) => {
+    const index = state.notes.findIndex(n => n.id === note.id);
+    const notes = [...state.notes];
+    notes[index].completed = !note.completed;
+    dispatch({type: 'SET_NOTES', notes});
+    try {
+      await API.graphql({
+        query: UpdateNote,
+        variables: {input: {id: note.id, completed: notes[index].completed}}
+      })
+      console.log('note successfully updated!');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchNotes()
   }, []);
@@ -102,7 +119,10 @@ const App = () => {
       <List.Item 
         style={styles.item}
         actions={[
-          <p style={styles.p} onClick={() => deleteNote(item)}>Delete</p>
+          <p style={styles.p} onClick={() => deleteNote(item)}>Delete</p>,
+          <p style={styles.p} onClick={() => updateNote(item)}>
+            {item.completed ? 'completed' : 'mark completed'}
+          </p>
         ]}
       >
         <List.Item.Meta
