@@ -9,7 +9,7 @@ import {
   deleteNote as DeleteNote,
   updateNote as UpdateNote
 } from './graphql/mutations';
-import { onCreateNote } from './graphql/subscriptions';
+import { onCreateNote, onUpdateNote, onDeleteNote } from './graphql/subscriptions';
 
 const CLIENT_ID = uuid()
 
@@ -26,6 +26,19 @@ const reducer = (state, action) => {
       return { ...state, notes: action.notes, loading: false };
     case 'ADD_NOTE':
       return { ...state, notes: [action.note, ...state.notes]}
+    case 'UPDATE_NOTE':
+      const updateIndex = state.notes.findIndex(note => note.id === action.note.id);
+      return { ...state, notes: [
+        ...state.notes.slice(0, updateIndex),
+        action.note,
+        ...state.notes.slice(updateIndex + 1)
+      ]};
+    case 'DELETE_NOTE':
+      const deleteIndex = state.notes.findIndex(note => note.id === action.note.id);
+      return { ...state, notes: [
+        ...state.notes.slice(0, deleteIndex),
+        ...state.notes.slice(deleteIndex + 1)
+      ]};
     case 'RESET_FORM':
       return { ...state, form: initialState.form }
     case 'SET_INPUT':
@@ -113,17 +126,32 @@ const App = () => {
 
   useEffect(() => {
     fetchNotes();
-    const subscription = API.graphql({
-      query: onCreateNote
-    })
-      .subscribe({
-        next: noteData => {
-          const note = noteData.value.data.onCreateNote
-          if (CLIENT_ID === note.clientId) return
-          dispatch({ type: 'ADD_NOTE', note })
-        }
-      });
-      return () => subscription.unsubscribe()
+    const onCreateSubscription = API.graphql({ query: onCreateNote }).subscribe({
+      next: (noteData) => {
+        const note = noteData.value.data.onCreateNote;
+        if (CLIENT_ID === note.clientId) return;
+        dispatch({ type: 'ADD_NOTE', note });
+      },
+    });
+  
+    const onUpdateSubscription = API.graphql({ query: onUpdateNote }).subscribe({
+      next: (noteData) => {
+        const note = noteData.value.data.onUpdateNote;
+        dispatch({ type: 'UPDATE_NOTE', note });
+      },
+    });
+  
+    const onDeleteSubscription = API.graphql({ query: onDeleteNote }).subscribe({
+      next: (noteData) => {
+        const note = noteData.value.data.onDeleteNote;
+        dispatch({ type: 'DELETE_NOTE', note });
+      },
+    });
+      return () => {
+        onUpdateSubscription.unsubscribe();
+        onDeleteSubscription.unsubscribe();
+        onCreateSubscription.unsubscribe();
+      }
   }, []);
 
   function renderItem(item) {
